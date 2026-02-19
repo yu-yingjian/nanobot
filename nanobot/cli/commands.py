@@ -373,6 +373,18 @@ def gateway(
     # Set cron callback (needs agent)
     async def on_cron_job(job: CronJob) -> str | None:
         """Execute a cron job through the agent."""
+        from nanobot.bus.events import OutboundMessage
+
+        # Direct reminder/event: send payload text as-is, do not feed it back to LLM.
+        if job.payload.kind == "system_event":
+            if job.payload.deliver and job.payload.to:
+                await bus.publish_outbound(OutboundMessage(
+                    channel=job.payload.channel or "cli",
+                    chat_id=job.payload.to,
+                    content=job.payload.message or "",
+                ))
+            return job.payload.message or ""
+
         response = await agent.process_direct(
             job.payload.message,
             session_key=f"cron:{job.id}",
@@ -380,7 +392,6 @@ def gateway(
             chat_id=job.payload.to or "direct",
         )
         if job.payload.deliver and job.payload.to:
-            from nanobot.bus.events import OutboundMessage
             await bus.publish_outbound(OutboundMessage(
                 channel=job.payload.channel or "cli",
                 chat_id=job.payload.to,

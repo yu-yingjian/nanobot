@@ -125,6 +125,7 @@ class CronTool(Tool):
             name=message[:30],
             schedule=schedule,
             message=message,
+            payload_kind="system_event",
             deliver=True,
             channel=self._channel,
             to=self._chat_id,
